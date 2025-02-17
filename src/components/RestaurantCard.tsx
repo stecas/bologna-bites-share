@@ -1,5 +1,5 @@
 
-import { Star, MapPin, Utensils, StickyNote } from "lucide-react";
+import { Star, MapPin, Utensils, StickyNote, Settings2 } from "lucide-react";
 import { useState } from "react";
 
 interface RestaurantCardProps {
@@ -12,6 +12,7 @@ interface RestaurantCardProps {
   notes?: string;
   onAddRecommendation: (recommendation: string) => void;
   onUpdateNotes: (notes: string) => void;
+  onUpdateImage: (image: string) => void;
 }
 
 const RestaurantCard = ({
@@ -24,24 +25,71 @@ const RestaurantCard = ({
   notes = "",
   onAddRecommendation,
   onUpdateNotes,
+  onUpdateImage,
 }: RestaurantCardProps) => {
   const [localNotes, setLocalNotes] = useState(notes);
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState(image);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalNotes(e.target.value);
     onUpdateNotes(e.target.value);
   };
 
+  const handleImageUpdate = () => {
+    if (newImageUrl.trim()) {
+      onUpdateImage(newImageUrl);
+      setIsEditingImage(false);
+    }
+  };
+
   return (
     <div className="group relative overflow-hidden rounded-xl bg-white shadow-glass transition-all duration-300 hover:shadow-lg">
-      <div className="aspect-[16/9] overflow-hidden">
+      <div className="relative aspect-[16/9] overflow-hidden">
         <img
           src={image}
           alt={name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        <button
+          onClick={() => setIsEditingImage(true)}
+          className="absolute right-2 top-2 rounded-full bg-white/80 p-2 text-neutral-dark shadow-sm hover:bg-white"
+        >
+          <Settings2 className="h-5 w-5" />
+        </button>
       </div>
       <div className="p-6">
+        {isEditingImage && (
+          <div className="mb-4 space-y-2 rounded-lg bg-neutral p-4">
+            <label className="block text-sm font-medium text-neutral-dark">
+              URL Immagine
+            </label>
+            <input
+              type="url"
+              value={newImageUrl}
+              onChange={(e) => setNewImageUrl(e.target.value)}
+              className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+              placeholder="Inserisci l'URL dell'immagine..."
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleImageUpdate}
+                className="rounded-md bg-primary px-3 py-1 text-sm text-white hover:bg-primary-hover"
+              >
+                Salva
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingImage(false);
+                  setNewImageUrl(image);
+                }}
+                className="rounded-md bg-neutral-dark px-3 py-1 text-sm text-white hover:opacity-90"
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        )}
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-neutral-dark">{name}</h3>
           <div className="flex items-center gap-1">

@@ -134,6 +134,19 @@ const Index = () => {
     );
   };
 
+  const handleUpdateImage = (id: number, image: string) => {
+    setRestaurantData((prev) =>
+      prev.map((restaurant) =>
+        restaurant.id === id
+          ? {
+              ...restaurant,
+              image,
+            }
+          : restaurant
+      )
+    );
+  };
+
   return (
     <div className="min-h-screen bg-neutral pb-20">
       <header className="mb-12 bg-white py-8 shadow-sm">
@@ -157,6 +170,7 @@ const Index = () => {
                   handleAddRecommendation(restaurant.id, recommendation)
                 }
                 onUpdateNotes={(notes) => handleUpdateNotes(restaurant.id, notes)}
+                onUpdateImage={(image) => handleUpdateImage(restaurant.id, image)}
               />
             </div>
           ))}
