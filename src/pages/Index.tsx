@@ -11,6 +11,7 @@ const restaurants = [
     address: "Via delle Belle Arti, 17/A, 40126 Bologna",
     image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
     recommendations: ["Tagliatelle al Ragù", "Tortellini in Brodo"],
+    notes: "",
   },
   {
     id: 2,
@@ -20,6 +21,7 @@ const restaurants = [
     address: "Via Mentana, 1, 40126 Bologna",
     image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=2074&auto=format&fit=crop",
     recommendations: ["Gramigna alla Salsiccia", "Cotoletta alla Bolognese"],
+    notes: "",
   },
   {
     id: 3,
@@ -29,8 +31,78 @@ const restaurants = [
     address: "Via Majani, 1, 40125 Bologna",
     image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=2074&auto=format&fit=crop",
     recommendations: ["Tortelloni di Ricotta", "Tagliata di Manzo"],
+    notes: "",
   },
-  // Add more restaurants here...
+  {
+    id: 4,
+    name: "Ristorante Donatello",
+    rating: 4.5,
+    cuisine: "Cucina Emiliana",
+    address: "Via Augusto Righi, 8, 40126 Bologna",
+    image: "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Lasagne Verdi", "Bollito Misto"],
+    notes: "",
+  },
+  {
+    id: 5,
+    name: "Trattoria da Vito",
+    rating: 4.4,
+    cuisine: "Cucina Casalinga Bolognese",
+    address: "Via Mario Musolesi, 9, 40138 Bologna",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Tortellini alla Panna", "Crescentine"],
+    notes: "",
+  },
+  {
+    id: 6,
+    name: "Ristorante Diana",
+    rating: 4.9,
+    cuisine: "Alta Cucina Bolognese",
+    address: "Via dell'Indipendenza, 24, 40121 Bologna",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Carrello dei Bolliti", "Filetto al Tartufo"],
+    notes: "",
+  },
+  {
+    id: 7,
+    name: "All'Osteria Bottega",
+    rating: 4.7,
+    cuisine: "Cucina Tradizionale",
+    address: "Via Santa Caterina, 51, 40123 Bologna",
+    image: "https://images.unsplash.com/photo-1554679665-f5537f187268?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Tagliatelle al Ragù", "Cotoletta alla Petroniana"],
+    notes: "",
+  },
+  {
+    id: 8,
+    name: "Trattoria del Rosso",
+    rating: 4.5,
+    cuisine: "Cucina Bolognese",
+    address: "Via Augusto Righi, 30, 40126 Bologna",
+    image: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?q=80&w=2074&auto=format&fit=crop",
+    recommendations: ["Pasta alla Gricia", "Scaloppine al Limone"],
+    notes: "",
+  },
+  {
+    id: 9,
+    name: "Osteria al 15",
+    rating: 4.6,
+    cuisine: "Cucina Regionale",
+    address: "Via Mirasole, 13, 40124 Bologna",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Tortelloni Burro e Salvia", "Brasato al Sangiovese"],
+    notes: "",
+  },
+  {
+    id: 10,
+    name: "Vicolo Colombina",
+    rating: 4.8,
+    cuisine: "Cucina del Territorio",
+    address: "Vicolo Colombina, 5/b, 40123 Bologna",
+    image: "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?q=80&w=2070&auto=format&fit=crop",
+    recommendations: ["Tortellini in Brodo", "Zuppa Inglese"],
+    notes: "",
+  },
 ];
 
 const Index = () => {
@@ -43,6 +115,19 @@ const Index = () => {
           ? {
               ...restaurant,
               recommendations: [...restaurant.recommendations, recommendation],
+            }
+          : restaurant
+      )
+    );
+  };
+
+  const handleUpdateNotes = (id: number, notes: string) => {
+    setRestaurantData((prev) =>
+      prev.map((restaurant) =>
+        restaurant.id === id
+          ? {
+              ...restaurant,
+              notes,
             }
           : restaurant
       )
@@ -71,6 +156,7 @@ const Index = () => {
                 onAddRecommendation={(recommendation) =>
                   handleAddRecommendation(restaurant.id, recommendation)
                 }
+                onUpdateNotes={(notes) => handleUpdateNotes(restaurant.id, notes)}
               />
             </div>
           ))}

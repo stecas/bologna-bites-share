@@ -1,5 +1,6 @@
 
-import { Star, MapPin, Utensils } from "lucide-react";
+import { Star, MapPin, Utensils, StickyNote } from "lucide-react";
+import { useState } from "react";
 
 interface RestaurantCardProps {
   name: string;
@@ -8,7 +9,9 @@ interface RestaurantCardProps {
   address: string;
   image: string;
   recommendations: string[];
+  notes?: string;
   onAddRecommendation: (recommendation: string) => void;
+  onUpdateNotes: (notes: string) => void;
 }
 
 const RestaurantCard = ({
@@ -18,8 +21,17 @@ const RestaurantCard = ({
   address,
   image,
   recommendations,
+  notes = "",
   onAddRecommendation,
+  onUpdateNotes,
 }: RestaurantCardProps) => {
+  const [localNotes, setLocalNotes] = useState(notes);
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalNotes(e.target.value);
+    onUpdateNotes(e.target.value);
+  };
+
   return (
     <div className="group relative overflow-hidden rounded-xl bg-white shadow-glass transition-all duration-300 hover:shadow-lg">
       <div className="aspect-[16/9] overflow-hidden">
@@ -57,6 +69,19 @@ const RestaurantCard = ({
               </span>
             ))}
           </div>
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-2 text-secondary">
+            <StickyNote className="h-4 w-4" />
+            <h4 className="font-medium text-neutral-dark">Le tue note:</h4>
+          </div>
+          <textarea
+            value={localNotes}
+            onChange={handleNotesChange}
+            placeholder="Aggiungi le tue note personali..."
+            className="w-full rounded-lg border border-neutral p-2 text-sm text-neutral-dark placeholder:text-secondary/70"
+            rows={3}
+          />
         </div>
       </div>
     </div>
