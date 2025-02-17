@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
+import { Plus } from "lucide-react";
 
-const restaurants = [
+const defaultRestaurants = [
   {
     id: 1,
     name: "Trattoria Anna Maria",
@@ -105,46 +105,39 @@ const restaurants = [
   },
 ];
 
+const emptyRestaurant = {
+  name: "Nuovo Ristorante",
+  rating: 0,
+  cuisine: "Tipologia Cucina",
+  address: "Indirizzo",
+  image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+  recommendations: [],
+  notes: "",
+};
+
 const Index = () => {
-  const [restaurantData, setRestaurantData] = useState(restaurants);
+  const [restaurantData, setRestaurantData] = useState(defaultRestaurants);
 
-  const handleAddRecommendation = (id: number, recommendation: string) => {
+  const handleUpdateCard = (id: number, field: string, value: any) => {
     setRestaurantData((prev) =>
       prev.map((restaurant) =>
         restaurant.id === id
           ? {
               ...restaurant,
-              recommendations: [...restaurant.recommendations, recommendation],
+              [field]: value,
             }
           : restaurant
       )
     );
   };
 
-  const handleUpdateNotes = (id: number, notes: string) => {
-    setRestaurantData((prev) =>
-      prev.map((restaurant) =>
-        restaurant.id === id
-          ? {
-              ...restaurant,
-              notes,
-            }
-          : restaurant
-      )
-    );
+  const handleAddRestaurant = () => {
+    const newId = Math.max(...restaurantData.map((r) => r.id)) + 1;
+    setRestaurantData((prev) => [...prev, { ...emptyRestaurant, id: newId }]);
   };
 
-  const handleUpdateImage = (id: number, image: string) => {
-    setRestaurantData((prev) =>
-      prev.map((restaurant) =>
-        restaurant.id === id
-          ? {
-              ...restaurant,
-              image,
-            }
-          : restaurant
-      )
-    );
+  const handleDeleteRestaurant = (id: number) => {
+    setRestaurantData((prev) => prev.filter((restaurant) => restaurant.id !== id));
   };
 
   return (
@@ -161,16 +154,22 @@ const Index = () => {
       </header>
 
       <main className="container">
+        <div className="mb-8 flex justify-end">
+          <button
+            onClick={handleAddRestaurant}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+          >
+            <Plus className="h-4 w-4" />
+            Aggiungi Ristorante
+          </button>
+        </div>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {restaurantData.map((restaurant) => (
             <div key={restaurant.id} className="animate-fade-in">
               <RestaurantCard
                 {...restaurant}
-                onAddRecommendation={(recommendation) =>
-                  handleAddRecommendation(restaurant.id, recommendation)
-                }
-                onUpdateNotes={(notes) => handleUpdateNotes(restaurant.id, notes)}
-                onUpdateImage={(image) => handleUpdateImage(restaurant.id, image)}
+                onUpdateCard={handleUpdateCard}
+                onDelete={handleDeleteRestaurant}
               />
             </div>
           ))}
