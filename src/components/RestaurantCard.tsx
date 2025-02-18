@@ -1,6 +1,6 @@
 
 import { Star, MapPin, Utensils, StickyNote, Settings2, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface RestaurantCardProps {
   id: number;
@@ -38,6 +38,9 @@ const RestaurantCard = ({
     notes,
   });
   const [newRecommendation, setNewRecommendation] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [imagePosition, setImagePosition] = useState({ x: 50, y: 50 });
+  const imageRef = useRef<HTMLDivElement>(null);
 
   const handleSave = () => {
     Object.entries(editedData).forEach(([field, value]) => {
@@ -63,17 +66,57 @@ const RestaurantCard = ({
     });
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!imageRef.current) return;
+    setIsDragging(true);
+    
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setImagePosition({ x, y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !imageRef.current) return;
+    
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Limitiamo i valori tra 0 e 100 per mantenere l'immagine sempre visibile
+    setImagePosition({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
   const getGoogleMapsUrl = (address: string) => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + " Bologna")}`;
   };
 
   return (
     <div className="group relative overflow-hidden rounded-xl bg-white shadow-glass transition-all duration-300 hover:shadow-lg">
-      <div className="relative aspect-[16/9] overflow-hidden">
+      <div 
+        ref={imageRef}
+        className="relative aspect-[16/9] overflow-hidden cursor-move"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         <img
           src={isEditing ? editedData.image : image}
           alt={name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="absolute h-[150%] w-[150%] object-cover transition-transform duration-300"
+          style={{
+            left: `${-25 + (50 - imagePosition.x)}%`,
+            top: `${-25 + (50 - imagePosition.y)}%`,
+          }}
         />
         <button
           onClick={() => setIsEditing(!isEditing)}
