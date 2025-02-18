@@ -63,6 +63,10 @@ const RestaurantCard = ({
     });
   };
 
+  const getGoogleMapsUrl = (address: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + " Bologna")}`;
+  };
+
   return (
     <div className="group relative overflow-hidden rounded-xl bg-white shadow-glass transition-all duration-300 hover:shadow-lg">
       <div className="relative aspect-[16/9] overflow-hidden">
@@ -211,7 +215,14 @@ const RestaurantCard = ({
             </div>
             <div className="mb-6 flex items-start gap-2 text-secondary">
               <MapPin className="h-4 w-4 shrink-0 translate-y-1" />
-              <span className="text-sm">{address}</span>
+              <a
+                href={getGoogleMapsUrl(address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm hover:text-primary hover:underline"
+              >
+                {address}
+              </a>
             </div>
             <div className="space-y-3">
               <h4 className="font-medium text-neutral-dark">Piatti Consigliati:</h4>
