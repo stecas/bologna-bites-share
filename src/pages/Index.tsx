@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
-import { Plus, Download, Send } from "lucide-react";
+import { Plus, Download, Send, MapPin, Pencil, Check, X } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { toast } from "sonner";
 
@@ -122,6 +121,9 @@ const Index = () => {
   const [restaurantData, setRestaurantData] = useState(defaultRestaurants);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [headerTitle, setHeaderTitle] = useState("Sapori di Bologna");
+  const [headerSubtitle, setHeaderSubtitle] = useState("I migliori ristoranti tradizionali vicino alla Fiera");
 
   const handleUpdateCard = (id: number, field: string, value: any) => {
     setRestaurantData((prev) =>
@@ -145,13 +147,18 @@ const Index = () => {
     setRestaurantData((prev) => prev.filter((restaurant) => restaurant.id !== id));
   };
 
+  const getGoogleMapsUrl = (address: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + ", Bologna, Italy")}`;
+  };
+
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
     try {
       const element = document.createElement("div");
       element.innerHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #E35A3D; text-align: center; font-size: 24px; margin-bottom: 40px;">Sapori di Bologna</h1>
+          <h1 style="color: #E35A3D; text-align: center; font-size: 24px; margin-bottom: 40px;">${headerTitle}</h1>
+          <p style="text-align: center; color: #7C9082; margin-bottom: 40px;">${headerSubtitle}</p>
           ${restaurantData
             .map(
               (restaurant) => `
@@ -229,7 +236,15 @@ const Index = () => {
                   color: #7C9082;
                 ">
                   <span>📍</span>
-                  <span style="font-size: 14px;">${restaurant.address}</span>
+                  <a 
+                    href="${getGoogleMapsUrl(restaurant.address)}"
+                    style="
+                      font-size: 14px;
+                      color: #E35A3D;
+                      text-decoration: none;
+                    "
+                    target="_blank"
+                  >${restaurant.address}</a>
                 </div>
                 
                 <div>
@@ -335,13 +350,56 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-neutral pb-20">
       <header className="mb-12 bg-white py-8 shadow-sm">
-        <div className="container">
-          <h1 className="animate-fade-up text-center text-4xl font-bold text-neutral-dark">
-            Sapori di Bologna
-          </h1>
-          <p className="animate-fade-up text-center text-lg text-secondary">
-            I migliori ristoranti tradizionali vicino alla Fiera
-          </p>
+        <div className="container relative">
+          {isEditingHeader ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-2">
+                <input
+                  type="text"
+                  value={headerTitle}
+                  onChange={(e) => setHeaderTitle(e.target.value)}
+                  className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-4xl font-bold text-neutral-dark"
+                />
+                <button
+                  onClick={() => setIsEditingHeader(false)}
+                  className="rounded-full bg-green-500 p-2 text-white hover:bg-green-600"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    setHeaderTitle("Sapori di Bologna");
+                    setHeaderSubtitle("I migliori ristoranti tradizionali vicino alla Fiera");
+                    setIsEditingHeader(false);
+                  }}
+                  className="rounded-full bg-red-500 p-2 text-white hover:bg-red-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={headerSubtitle}
+                onChange={(e) => setHeaderSubtitle(e.target.value)}
+                className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-lg text-secondary"
+              />
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsEditingHeader(true)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-primary p-2 text-white hover:bg-primary-hover"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <h1 className="animate-fade-up text-center text-4xl font-bold text-neutral-dark">
+                {headerTitle}
+              </h1>
+              <p className="animate-fade-up text-center text-lg text-secondary">
+                {headerSubtitle}
+              </p>
+            </>
+          )}
         </div>
       </header>
 
