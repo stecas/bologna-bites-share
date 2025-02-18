@@ -1,6 +1,9 @@
+
 import { useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
-import { Plus } from "lucide-react";
+import { Plus, Download, Send } from "lucide-react";
+import html2pdf from "html2pdf.js";
+import { toast } from "sonner";
 
 const defaultRestaurants = [
   {
@@ -117,6 +120,8 @@ const emptyRestaurant = {
 
 const Index = () => {
   const [restaurantData, setRestaurantData] = useState(defaultRestaurants);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const handleUpdateCard = (id: number, field: string, value: any) => {
     setRestaurantData((prev) =>
@@ -140,6 +145,84 @@ const Index = () => {
     setRestaurantData((prev) => prev.filter((restaurant) => restaurant.id !== id));
   };
 
+  const generatePDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      // Crea un elemento temporaneo per il PDF
+      const element = document.createElement("div");
+      element.innerHTML = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #E35A3D; text-align: center; font-size: 24px; margin-bottom: 20px;">Sapori di Bologna</h1>
+          ${restaurantData
+            .map(
+              (restaurant) => `
+            <div style="margin-bottom: 30px; page-break-inside: avoid;">
+              <h2 style="color: #2D3436; font-size: 20px; margin-bottom: 10px;">${
+                restaurant.name
+              }</h2>
+              <p style="color: #7C9082; margin: 5px 0;">⭐️ ${restaurant.rating.toFixed(
+                1
+              )}</p>
+              <p style="color: #7C9082; margin: 5px 0;">🍽️ ${restaurant.cuisine}</p>
+              <p style="color: #7C9082; margin: 5px 0;">📍 ${restaurant.address}</p>
+              ${
+                restaurant.recommendations.length > 0
+                  ? `<p style="color: #2D3436; margin: 10px 0;">Piatti consigliati:</p>
+                     <ul style="color: #7C9082; margin: 5px 0;">
+                       ${restaurant.recommendations
+                         .map((dish) => `<li>${dish}</li>`)
+                         .join("")}
+                     </ul>`
+                  : ""
+              }
+              ${
+                restaurant.notes
+                  ? `<p style="color: #2D3436; margin: 10px 0;">Note:</p>
+                     <p style="color: #7C9082; margin: 5px 0;">${restaurant.notes}</p>`
+                  : ""
+              }
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      `;
+
+      const opt = {
+        margin: 10,
+        filename: "sapori-di-bologna.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+
+      const pdf = await html2pdf().set(opt).from(element).save();
+      toast.success("PDF generato con successo!");
+      return pdf;
+    } catch (error) {
+      toast.error("Errore nella generazione del PDF");
+      console.error("Errore nella generazione del PDF:", error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const shareViaWhatsApp = async () => {
+    if (!phoneNumber.trim()) {
+      toast.error("Inserisci un numero di telefono valido");
+      return;
+    }
+
+    try {
+      const formattedNumber = phoneNumber.replace(/\D/g, "");
+      const whatsappUrl = `https://wa.me/${formattedNumber}`;
+      window.open(whatsappUrl, "_blank");
+    } catch (error) {
+      toast.error("Errore nell'invio via WhatsApp");
+      console.error("Errore nell'invio via WhatsApp:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral pb-20">
       <header className="mb-12 bg-white py-8 shadow-sm">
@@ -154,7 +237,33 @@ const Index = () => {
       </header>
 
       <main className="container">
-        <div className="mb-8 flex justify-end">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {isGeneratingPDF ? "Generando PDF..." : "Download PDF"}
+            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="tel"
+                placeholder="Numero WhatsApp"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+              />
+              <button
+                onClick={shareViaWhatsApp}
+                className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 text-sm font-medium text-white hover:bg-[#128C7E]"
+              >
+                <Send className="h-4 w-4" />
+                Invia
+              </button>
+            </div>
+          </div>
           <button
             onClick={handleAddRestaurant}
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
