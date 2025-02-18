@@ -148,39 +148,148 @@ const Index = () => {
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
     try {
-      // Crea un elemento temporaneo per il PDF
       const element = document.createElement("div");
       element.innerHTML = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #E35A3D; text-align: center; font-size: 24px; margin-bottom: 20px;">Sapori di Bologna</h1>
+        <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #E35A3D; text-align: center; font-size: 24px; margin-bottom: 40px;">Sapori di Bologna</h1>
           ${restaurantData
             .map(
               (restaurant) => `
-            <div style="margin-bottom: 30px; page-break-inside: avoid;">
-              <h2 style="color: #2D3436; font-size: 20px; margin-bottom: 10px;">${
-                restaurant.name
-              }</h2>
-              <p style="color: #7C9082; margin: 5px 0;">⭐️ ${restaurant.rating.toFixed(
-                1
-              )}</p>
-              <p style="color: #7C9082; margin: 5px 0;">🍽️ ${restaurant.cuisine}</p>
-              <p style="color: #7C9082; margin: 5px 0;">📍 ${restaurant.address}</p>
-              ${
-                restaurant.recommendations.length > 0
-                  ? `<p style="color: #2D3436; margin: 10px 0;">Piatti consigliati:</p>
-                     <ul style="color: #7C9082; margin: 5px 0;">
-                       ${restaurant.recommendations
-                         .map((dish) => `<li>${dish}</li>`)
-                         .join("")}
-                     </ul>`
-                  : ""
-              }
-              ${
-                restaurant.notes
-                  ? `<p style="color: #2D3436; margin: 10px 0;">Note:</p>
-                     <p style="color: #7C9082; margin: 5px 0;">${restaurant.notes}</p>`
-                  : ""
-              }
+            <div style="
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+              margin: 0 auto 30px;
+              max-width: 500px;
+              overflow: hidden;
+              page-break-inside: avoid;
+            ">
+              <div style="
+                position: relative;
+                width: 100%;
+                padding-top: 56.25%;
+                overflow: hidden;
+                background: #f8f8f8;
+              ">
+                <img 
+                  src="${restaurant.image}"
+                  alt="${restaurant.name}"
+                  style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                  "
+                />
+              </div>
+              <div style="padding: 24px;">
+                <div style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 8px;
+                ">
+                  <h2 style="
+                    color: #2D3436;
+                    font-size: 20px;
+                    font-weight: 600;
+                    margin: 0;
+                  ">${restaurant.name}</h2>
+                  <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                  ">
+                    <span style="color: #FFB168;">⭐</span>
+                    <span style="
+                      color: #2D3436;
+                      font-weight: 500;
+                    ">${restaurant.rating.toFixed(1)}</span>
+                  </div>
+                </div>
+                
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-bottom: 16px;
+                  color: #7C9082;
+                ">
+                  <span>🍽️</span>
+                  <span style="font-size: 14px;">${restaurant.cuisine}</span>
+                </div>
+                
+                <div style="
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 8px;
+                  margin-bottom: 24px;
+                  color: #7C9082;
+                ">
+                  <span>📍</span>
+                  <span style="font-size: 14px;">${restaurant.address}</span>
+                </div>
+                
+                <div>
+                  <h4 style="
+                    color: #2D3436;
+                    font-size: 16px;
+                    font-weight: 500;
+                    margin: 0 0 12px 0;
+                  ">Piatti Consigliati:</h4>
+                  <div style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                  ">
+                    ${restaurant.recommendations
+                      .map(
+                        (dish) => `
+                      <span style="
+                        background: #FAF7F2;
+                        color: #7C9082;
+                        padding: 4px 12px;
+                        border-radius: 9999px;
+                        font-size: 14px;
+                      ">${dish}</span>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                </div>
+                
+                ${
+                  restaurant.notes
+                    ? `
+                <div style="
+                  margin-top: 16px;
+                ">
+                  <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: #7C9082;
+                  ">
+                    <span>📝</span>
+                    <h4 style="
+                      color: #2D3436;
+                      font-size: 16px;
+                      font-weight: 500;
+                      margin: 0;
+                    ">Note:</h4>
+                  </div>
+                  <p style="
+                    color: #2D3436;
+                    font-size: 14px;
+                    margin: 8px 0 0 0;
+                  ">${restaurant.notes}</p>
+                </div>
+                `
+                    : ""
+                }
+              </div>
             </div>
           `
             )
@@ -189,10 +298,10 @@ const Index = () => {
       `;
 
       const opt = {
-        margin: 10,
+        margin: [15, 0],
         filename: "sapori-di-bologna.pdf",
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
