@@ -1,6 +1,5 @@
-
 import { Star, MapPin, Utensils, StickyNote, Settings2, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface RestaurantCardProps {
   id: number;
@@ -38,6 +37,18 @@ const RestaurantCard = ({
     notes,
   });
   const [newRecommendation, setNewRecommendation] = useState("");
+
+  useEffect(() => {
+    setEditedData({
+      name,
+      rating,
+      cuisine,
+      address,
+      image,
+      recommendations,
+      notes,
+    });
+  }, [name, rating, cuisine, address, image, recommendations, notes]);
 
   const handleSave = () => {
     Object.entries(editedData).forEach(([field, value]) => {
