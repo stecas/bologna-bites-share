@@ -1,8 +1,23 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
-import { Plus, Download, Send, MapPin, Pencil, Check, X } from "lucide-react";
+import { Plus, Download, Settings2 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Tipo per i template
+type Template = {
+  id: string;
+  title: string;
+  subtitle: string;
+  restaurants: typeof defaultRestaurants;
+};
 
 const defaultRestaurants = [
   {
@@ -118,12 +133,67 @@ const emptyRestaurant = {
 };
 
 const Index = () => {
-  const [restaurantData, setRestaurantData] = useState(defaultRestaurants);
-  const [phoneNumber, setPhoneNumber] = useState("");
+  // Gestione dei template
+  const [templates, setTemplates] = useState<Template[]>(() => {
+    const saved = localStorage.getItem("restaurantTemplates");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return [{
+      id: "default",
+      title: "Sapori di Bologna",
+      subtitle: "I migliori ristoranti tradizionali vicino alla Fiera",
+      restaurants: defaultRestaurants
+    }];
+  });
+  
+  const [currentTemplateId, setCurrentTemplateId] = useState<string>(() => {
+    const saved = localStorage.getItem("currentTemplateId");
+    return saved || "default";
+  });
+
+  const [restaurantData, setRestaurantData] = useState<typeof defaultRestaurants>(() => {
+    const currentTemplate = templates.find(t => t.id === currentTemplateId);
+    return currentTemplate?.restaurants || defaultRestaurants;
+  });
+
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [headerTitle, setHeaderTitle] = useState("Sapori di Bologna");
-  const [headerSubtitle, setHeaderSubtitle] = useState("I migliori ristoranti tradizionali vicino alla Fiera");
+  const [headerTitle, setHeaderTitle] = useState(() => {
+    const currentTemplate = templates.find(t => t.id === currentTemplateId);
+    return currentTemplate?.title || "Sapori di Bologna";
+  });
+  const [headerSubtitle, setHeaderSubtitle] = useState(() => {
+    const currentTemplate = templates.find(t => t.id === currentTemplateId);
+    return currentTemplate?.subtitle || "I migliori ristoranti tradizionali vicino alla Fiera";
+  });
+
+  // Salvataggio automatico dei cambiamenti
+  useEffect(() => {
+    const updatedTemplates = templates.map(template => 
+      template.id === currentTemplateId 
+        ? { ...template, restaurants: restaurantData, title: headerTitle, subtitle: headerSubtitle }
+        : template
+    );
+    setTemplates(updatedTemplates);
+    localStorage.setItem("restaurantTemplates", JSON.stringify(updatedTemplates));
+    localStorage.setItem("currentTemplateId", currentTemplateId);
+  }, [restaurantData, headerTitle, headerSubtitle, currentTemplateId]);
+
+  const handleCreateNewTemplate = () => {
+    const newId = Date.now().toString();
+    const newTemplate: Template = {
+      id: newId,
+      title: "Nuovo Template",
+      subtitle: "Inserisci sottotitolo",
+      restaurants: []
+    };
+    setTemplates(prev => [...prev, newTemplate]);
+    setCurrentTemplateId(newId);
+    setRestaurantData([]);
+    setHeaderTitle(newTemplate.title);
+    setHeaderSubtitle(newTemplate.subtitle);
+  };
 
   const handleUpdateCard = (id: number, field: string, value: any) => {
     setRestaurantData((prev) =>
@@ -139,16 +209,12 @@ const Index = () => {
   };
 
   const handleAddRestaurant = () => {
-    const newId = Math.max(...restaurantData.map((r) => r.id)) + 1;
+    const newId = Math.max(...restaurantData.map((r) => r.id), 0) + 1;
     setRestaurantData((prev) => [...prev, { ...emptyRestaurant, id: newId }]);
   };
 
   const handleDeleteRestaurant = (id: number) => {
     setRestaurantData((prev) => prev.filter((restaurant) => restaurant.id !== id));
-  };
-
-  const getGoogleMapsUrl = (address: string) => {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + ", Bologna, Italy")}`;
   };
 
   const generatePDF = async () => {
@@ -331,22 +397,6 @@ const Index = () => {
     }
   };
 
-  const shareViaWhatsApp = async () => {
-    if (!phoneNumber.trim()) {
-      toast.error("Inserisci un numero di telefono valido");
-      return;
-    }
-
-    try {
-      const formattedNumber = phoneNumber.replace(/\D/g, "");
-      const whatsappUrl = `https://wa.me/${formattedNumber}`;
-      window.open(whatsappUrl, "_blank");
-    } catch (error) {
-      toast.error("Errore nell'invio via WhatsApp");
-      console.error("Errore nell'invio via WhatsApp:", error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-neutral pb-20">
       <header className="mb-12 bg-white py-8 shadow-sm">
@@ -364,17 +414,7 @@ const Index = () => {
                   onClick={() => setIsEditingHeader(false)}
                   className="rounded-full bg-green-500 p-2 text-white hover:bg-green-600"
                 >
-                  <Check className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    setHeaderTitle("Sapori di Bologna");
-                    setHeaderSubtitle("I migliori ristoranti tradizionali vicino alla Fiera");
-                    setIsEditingHeader(false);
-                  }}
-                  className="rounded-full bg-red-500 p-2 text-white hover:bg-red-600"
-                >
-                  <X className="h-4 w-4" />
+                  ✓
                 </button>
               </div>
               <input
@@ -386,12 +426,34 @@ const Index = () => {
             </div>
           ) : (
             <>
-              <button
-                onClick={() => setIsEditingHeader(true)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-primary p-2 text-white hover:bg-primary-hover"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="rounded-full bg-primary p-2 text-white hover:bg-primary-hover">
+                    <Settings2 className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setIsEditingHeader(true)}>
+                      Modifica intestazione
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCreateNewTemplate}>
+                      Nuovo template
+                    </DropdownMenuItem>
+                    {templates.map(template => (
+                      <DropdownMenuItem
+                        key={template.id}
+                        onClick={() => {
+                          setCurrentTemplateId(template.id);
+                          setRestaurantData(template.restaurants);
+                          setHeaderTitle(template.title);
+                          setHeaderSubtitle(template.subtitle);
+                        }}
+                      >
+                        {template.title}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <h1 className="animate-fade-up text-center text-4xl font-bold text-neutral-dark">
                 {headerTitle}
               </h1>
@@ -405,32 +467,14 @@ const Index = () => {
 
       <main className="container">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={generatePDF}
-              disabled={isGeneratingPDF}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              {isGeneratingPDF ? "Generando PDF..." : "Download PDF"}
-            </button>
-            <div className="flex items-center gap-2">
-              <input
-                type="tel"
-                placeholder="Numero WhatsApp"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-sm"
-              />
-              <button
-                onClick={shareViaWhatsApp}
-                className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 text-sm font-medium text-white hover:bg-[#128C7E]"
-              >
-                <Send className="h-4 w-4" />
-                Invia
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={generatePDF}
+            disabled={isGeneratingPDF}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            {isGeneratingPDF ? "Generando PDF..." : "Download PDF"}
+          </button>
           <button
             onClick={handleAddRestaurant}
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
