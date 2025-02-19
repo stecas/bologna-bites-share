@@ -3,6 +3,8 @@ import RestaurantCard from "@/components/RestaurantCard";
 import { Plus, Download, Settings2 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { toast } from "sonner";
+import { Auth } from "@/components/Auth";
+import { supabase } from "@/lib/supabase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,90 +133,184 @@ const emptyRestaurant = {
 };
 
 const Index = () => {
-  const [templates, setTemplates] = useState<Template[]>(() => {
-    const saved = localStorage.getItem("restaurantTemplates");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return [{
-      id: "default",
-      title: "Sapori di Bologna",
-      subtitle: "I migliori ristoranti tradizionali vicino alla Fiera",
-      restaurants: defaultRestaurants
-    }];
-  });
-  
-  const [currentTemplateId, setCurrentTemplateId] = useState<string>(() => {
-    const saved = localStorage.getItem("currentTemplateId");
-    return saved || "default";
-  });
-
-  const [restaurantData, setRestaurantData] = useState<typeof defaultRestaurants>(() => {
-    const currentTemplate = templates.find(t => t.id === currentTemplateId);
-    return currentTemplate?.restaurants || defaultRestaurants;
-  });
-
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string>("");
+  const [restaurantData, setRestaurantData] = useState<typeof defaultRestaurants>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [headerTitle, setHeaderTitle] = useState(() => {
-    const currentTemplate = templates.find(t => t.id === currentTemplateId);
-    return currentTemplate?.title || "Sapori di Bologna";
-  });
-  const [headerSubtitle, setHeaderSubtitle] = useState(() => {
-    const currentTemplate = templates.find(t => t.id === currentTemplateId);
-    return currentTemplate?.subtitle || "I migliori ristoranti tradizionali vicino alla Fiera";
-  });
+  const [headerTitle, setHeaderTitle] = useState("Sapori di Bologna");
+  const [headerSubtitle, setHeaderSubtitle] = useState("I migliori ristoranti tradizionali vicino alla Fiera");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getGoogleMapsUrl = (address: string) => {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + ", Bologna, Italy")}`;
+  const fetchTemplates = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setTemplates([{
+          id: "default",
+          title: "Sapori di Bologna",
+          subtitle: "I migliori ristoranti tradizionali vicino alla Fiera",
+          restaurants: defaultRestaurants
+        }]);
+        setCurrentTemplateId("default");
+        setRestaurantData(defaultRestaurants);
+        return;
+      }
+
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('templates')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (templatesError) throw templatesError;
+
+      if (templatesData.length === 0) {
+        const { data: newTemplate, error: createError } = await supabase
+          .from('templates')
+          .insert({
+            title: "Sapori di Bologna",
+            subtitle: "I migliori ristoranti tradizionali vicino alla Fiera",
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        const { error: restaurantsError } = await supabase
+          .from('restaurants')
+          .insert(
+            defaultRestaurants.map(restaurant => ({
+              ...restaurant,
+              template_id: newTemplate.id
+            }))
+          );
+
+        if (restaurantsError) throw restaurantsError;
+
+        setTemplates([{ ...newTemplate, restaurants: defaultRestaurants }]);
+        setCurrentTemplateId(newTemplate.id);
+        setRestaurantData(defaultRestaurants);
+      } else {
+        const templatesWithRestaurants = await Promise.all(
+          templatesData.map(async (template) => {
+            const { data: restaurants } = await supabase
+              .from('restaurants')
+              .select('*')
+              .eq('template_id', template.id);
+            return { ...template, restaurants: restaurants || [] };
+          })
+        );
+
+        setTemplates(templatesWithRestaurants);
+        setCurrentTemplateId(templatesWithRestaurants[0].id);
+        setRestaurantData(templatesWithRestaurants[0].restaurants);
+        setHeaderTitle(templatesWithRestaurants[0].title);
+        setHeaderSubtitle(templatesWithRestaurants[0].subtitle);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error("Errore nel caricamento dei dati");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    const updatedTemplates = templates.map(template => 
-      template.id === currentTemplateId 
-        ? { ...template, restaurants: restaurantData, title: headerTitle, subtitle: headerSubtitle }
-        : template
-    );
-    setTemplates(updatedTemplates);
-    localStorage.setItem("restaurantTemplates", JSON.stringify(updatedTemplates));
-    localStorage.setItem("currentTemplateId", currentTemplateId);
-  }, [restaurantData, headerTitle, headerSubtitle, currentTemplateId]);
+    fetchTemplates();
 
-  const handleCreateNewTemplate = () => {
-    const newId = Date.now().toString();
-    const newTemplate: Template = {
-      id: newId,
-      title: "Nuovo Template",
-      subtitle: "Inserisci sottotitolo",
-      restaurants: []
-    };
-    setTemplates(prev => [...prev, newTemplate]);
-    setCurrentTemplateId(newId);
-    setRestaurantData([]);
-    setHeaderTitle(newTemplate.title);
-    setHeaderSubtitle(newTemplate.subtitle);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchTemplates();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleUpdateCard = async (id: number, field: string, value: any) => {
+    try {
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ [field]: value })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRestaurantData(prev =>
+        prev.map(restaurant =>
+          restaurant.id === id
+            ? { ...restaurant, [field]: value }
+            : restaurant
+        )
+      );
+    } catch (error) {
+      console.error('Error updating restaurant:', error);
+      toast.error("Errore nell'aggiornamento del ristorante");
+    }
   };
 
-  const handleUpdateCard = (id: number, field: string, value: any) => {
-    setRestaurantData((prev) =>
-      prev.map((restaurant) =>
-        restaurant.id === id
-          ? {
-              ...restaurant,
-              [field]: value,
-            }
-          : restaurant
-      )
-    );
+  const handleAddRestaurant = async () => {
+    try {
+      const newRestaurant = {
+        ...emptyRestaurant,
+        template_id: currentTemplateId
+      };
+
+      const { data, error } = await supabase
+        .from('restaurants')
+        .insert(newRestaurant)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setRestaurantData(prev => [...prev, data]);
+    } catch (error) {
+      console.error('Error adding restaurant:', error);
+      toast.error("Errore nell'aggiunta del ristorante");
+    }
   };
 
-  const handleAddRestaurant = () => {
-    const newId = Math.max(...restaurantData.map((r) => r.id), 0) + 1;
-    setRestaurantData((prev) => [...prev, { ...emptyRestaurant, id: newId }]);
+  const handleDeleteRestaurant = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('restaurants')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRestaurantData(prev => prev.filter(restaurant => restaurant.id !== id));
+    } catch (error) {
+      console.error('Error deleting restaurant:', error);
+      toast.error("Errore nell'eliminazione del ristorante");
+    }
   };
 
-  const handleDeleteRestaurant = (id: number) => {
-    setRestaurantData((prev) => prev.filter((restaurant) => restaurant.id !== id));
+  const handleCreateNewTemplate = async () => {
+    try {
+      const { data: newTemplate, error } = await supabase
+        .from('templates')
+        .insert({
+          title: "Nuovo Template",
+          subtitle: "Inserisci sottotitolo"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTemplates(prev => [...prev, { ...newTemplate, restaurants: [] }]);
+      setCurrentTemplateId(newTemplate.id);
+      setRestaurantData([]);
+      setHeaderTitle(newTemplate.title);
+      setHeaderSubtitle(newTemplate.subtitle);
+    } catch (error) {
+      console.error('Error creating template:', error);
+      toast.error("Errore nella creazione del template");
+    }
+  };
+
+  const getGoogleMapsUrl = (address: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + ", Bologna, Italy")}`;
   };
 
   const generatePDF = async () => {
@@ -400,100 +496,116 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-neutral pb-20">
       <header className="mb-12 bg-white py-8 shadow-sm">
-        <div className="container relative">
-          {isEditingHeader ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2">
+        <div className="container">
+          <div className="mb-8 flex justify-end">
+            <Auth />
+          </div>
+          <div className="relative">
+            {isEditingHeader ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-2">
+                  <input
+                    type="text"
+                    value={headerTitle}
+                    onChange={(e) => setHeaderTitle(e.target.value)}
+                    className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-4xl font-bold text-neutral-dark"
+                  />
+                  <button
+                    onClick={() => setIsEditingHeader(false)}
+                    className="rounded-full bg-green-500 p-2 text-white hover:bg-green-600"
+                  >
+                    ✓
+                  </button>
+                </div>
                 <input
                   type="text"
-                  value={headerTitle}
-                  onChange={(e) => setHeaderTitle(e.target.value)}
-                  className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-4xl font-bold text-neutral-dark"
+                  value={headerSubtitle}
+                  onChange={(e) => setHeaderSubtitle(e.target.value)}
+                  className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-lg text-secondary"
                 />
-                <button
-                  onClick={() => setIsEditingHeader(false)}
-                  className="rounded-full bg-green-500 p-2 text-white hover:bg-green-600"
-                >
-                  ✓
-                </button>
               </div>
-              <input
-                type="text"
-                value={headerSubtitle}
-                onChange={(e) => setHeaderSubtitle(e.target.value)}
-                className="w-full max-w-md rounded-lg border border-neutral-200 px-3 py-2 text-center text-lg text-secondary"
-              />
-            </div>
-          ) : (
-            <>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="rounded-full bg-primary p-2 text-white hover:bg-primary-hover">
-                    <Settings2 className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setIsEditingHeader(true)}>
-                      Modifica intestazione
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleCreateNewTemplate}>
-                      Nuovo template
-                    </DropdownMenuItem>
-                    {templates.map(template => (
-                      <DropdownMenuItem
-                        key={template.id}
-                        onClick={() => {
-                          setCurrentTemplateId(template.id);
-                          setRestaurantData(template.restaurants);
-                          setHeaderTitle(template.title);
-                          setHeaderSubtitle(template.subtitle);
-                        }}
-                      >
-                        {template.title}
+            ) : (
+              <>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="rounded-full bg-primary p-2 text-white hover:bg-primary-hover">
+                      <Settings2 className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setIsEditingHeader(true)}>
+                        Modifica intestazione
                       </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <h1 className="animate-fade-up text-center text-4xl font-bold text-neutral-dark">
-                {headerTitle}
-              </h1>
-              <p className="animate-fade-up text-center text-lg text-secondary">
-                {headerSubtitle}
-              </p>
-            </>
-          )}
+                      <DropdownMenuItem onClick={handleCreateNewTemplate}>
+                        Nuovo template
+                      </DropdownMenuItem>
+                      {templates.map(template => (
+                        <DropdownMenuItem
+                          key={template.id}
+                          onClick={() => {
+                            setCurrentTemplateId(template.id);
+                            setRestaurantData(template.restaurants);
+                            setHeaderTitle(template.title);
+                            setHeaderSubtitle(template.subtitle);
+                          }}
+                        >
+                          {template.title}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <h1 className="animate-fade-up text-center text-4xl font-bold text-neutral-dark">
+                  {headerTitle}
+                </h1>
+                <p className="animate-fade-up text-center text-lg text-secondary">
+                  {headerSubtitle}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="container">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <button
-            onClick={generatePDF}
-            disabled={isGeneratingPDF}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-          >
-            <Download className="h-4 w-4" />
-            {isGeneratingPDF ? "Generando PDF..." : "Download PDF"}
-          </button>
-          <button
-            onClick={handleAddRestaurant}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-          >
-            <Plus className="h-4 w-4" />
-            Aggiungi Ristorante
-          </button>
-        </div>
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {restaurantData.map((restaurant) => (
-            <div key={restaurant.id} className="animate-fade-in">
-              <RestaurantCard
-                {...restaurant}
-                onUpdateCard={handleUpdateCard}
-                onDelete={handleDeleteRestaurant}
-              />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+              <p className="text-secondary">Caricamento...</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+              <button
+                onClick={generatePDF}
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                {isGeneratingPDF ? "Generando PDF..." : "Download PDF"}
+              </button>
+              <button
+                onClick={handleAddRestaurant}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+              >
+                <Plus className="h-4 w-4" />
+                Aggiungi Ristorante
+              </button>
+            </div>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {restaurantData.map((restaurant) => (
+                <div key={restaurant.id} className="animate-fade-in">
+                  <RestaurantCard
+                    {...restaurant}
+                    onUpdateCard={handleUpdateCard}
+                    onDelete={handleDeleteRestaurant}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
