@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import { Plus, Download, Settings2 } from "lucide-react";
@@ -11,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Tipo per i template
 type Template = {
   id: string;
   title: string;
@@ -133,7 +131,6 @@ const emptyRestaurant = {
 };
 
 const Index = () => {
-  // Gestione dei template
   const [templates, setTemplates] = useState<Template[]>(() => {
     const saved = localStorage.getItem("restaurantTemplates");
     if (saved) {
@@ -168,7 +165,10 @@ const Index = () => {
     return currentTemplate?.subtitle || "I migliori ristoranti tradizionali vicino alla Fiera";
   });
 
-  // Salvataggio automatico dei cambiamenti
+  const getGoogleMapsUrl = (address: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address + ", Bologna, Italy")}`;
+  };
+
   useEffect(() => {
     const updatedTemplates = templates.map(template => 
       template.id === currentTemplateId 
