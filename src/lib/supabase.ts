@@ -1,17 +1,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Estendiamo l'interfaccia Window per includere le proprietà Supabase
-declare global {
-  interface Window {
-    SUPABASE_URL: string;
-    SUPABASE_ANON_KEY: string;
-  }
-}
-
-// Creiamo il client Supabase usando le credenziali globali
 export const supabase = createClient(
-  window.SUPABASE_URL,
+  'https://obxfcvqhhauvqzhezqqw.supabase.co',
   window.SUPABASE_ANON_KEY
 );
 
