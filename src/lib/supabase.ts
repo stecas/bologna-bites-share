@@ -1,9 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+// Creiamo il client Supabase con l'URL e la chiave anonima
 export const supabase = createClient(
   'https://obxfcvqhhauvqzhezqqw.supabase.co',
-  window.SUPABASE_ANON_KEY
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ieGZjdnFoaGF1dnF6aGV6cXF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTU2NjQyMDAsImV4cCI6MjAxMTI0MDIwMH0.0EitfYmu0VxXX9hYXr3GU8Muwygf7WG_tbFQYVPWQls'
 );
 
 // Tipi per il database
