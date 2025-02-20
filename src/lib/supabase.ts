@@ -1,8 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// In Lovable, le credenziali Supabase sono disponibili globalmente una volta 
-// che ci si è connessi attraverso l'interfaccia
+// Estendiamo l'interfaccia Window per includere le proprietà Supabase
+declare global {
+  interface Window {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }
+}
+
+// Creiamo il client Supabase usando le credenziali globali
 export const supabase = createClient(
   window.SUPABASE_URL,
   window.SUPABASE_ANON_KEY
