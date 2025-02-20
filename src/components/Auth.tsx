@@ -31,7 +31,8 @@ export function Auth() {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          }
+          },
+          skipBrowserRedirect: false // Assicuriamoci che il reindirizzamento del browser sia attivo
         },
       });
       if (error) throw error;
