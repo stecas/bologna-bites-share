@@ -1,10 +1,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// In Lovable, le credenziali Supabase sono disponibili globalmente una volta 
+// che ci si è connessi attraverso l'interfaccia
+export const supabase = createClient(
+  window.SUPABASE_URL,
+  window.SUPABASE_ANON_KEY
+);
 
 // Tipi per il database
 export type Template = {
