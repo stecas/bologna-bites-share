@@ -27,12 +27,13 @@ export function Auth() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: window.location.hostname === 'localhost' 
+            ? 'http://localhost:5173/auth/callback'
+            : `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          },
-          skipBrowserRedirect: false // Assicuriamoci che il reindirizzamento del browser sia attivo
+          }
         },
       });
       if (error) throw error;
